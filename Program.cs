@@ -20,7 +20,6 @@ builder.Services.AddSwaggerGen(c =>
         Description = "API de capacitación JMeter con JWT, imágenes y transferencias en RAM"
     });
 
-    // Definición del esquema de seguridad (Bearer)
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -31,7 +30,6 @@ builder.Services.AddSwaggerGen(c =>
         Description = "Ingrese SOLO el token JWT (sin la palabra 'Bearer')."
     });
 
-    // ✅ Nuevo formato con delegado (Microsoft.OpenApi 2.x)
     c.AddSecurityRequirement(document => new OpenApiSecurityRequirement
     {
         [new OpenApiSecuritySchemeReference("Bearer", document)] = []
@@ -73,19 +71,26 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// 5. Swagger en desarrollo
+// 5. Swagger habilitado en TODOS los entornos (necesario para Render)
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "ApiBancoDemo v1");
+    c.RoutePrefix = string.Empty; // UI en la raíz: https://tu-servicio.onrender.com/
+});
+
+// 6. Redirección raíz -> /swagger si en el futuro cambias RoutePrefix
+// (comentado porque ahora RoutePrefix = string.Empty)
+// app.MapGet("/", () => Results.Redirect("/swagger"));
+
+// 7. Pipeline
+// En Render el TLS lo termina el balanceador, por lo que UseHttpsRedirection
+// solo genera warnings ("Failed to determine the https port"). Lo limitamos a local.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "ApiBancoDemo v1");
-        c.RoutePrefix = string.Empty;
-    });
+    app.UseHttpsRedirection();
 }
 
-// 6. Pipeline
-app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
